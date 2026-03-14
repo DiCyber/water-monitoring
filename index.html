@@ -2,373 +2,1214 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Kualitas Air</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+    <title>Monitoring Kualitas Air</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <!-- Chart.js untuk grafik -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: Arial, sans-serif;
         }
         
         body {
-            background: #f0f2f5;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             padding: 20px;
+            color: #333;
         }
         
         .container {
-            max-width: 800px;
+            max-width: 1400px;
             margin: 0 auto;
         }
         
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 25px 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
         }
         
-        h1 {
+        .header-title h1 {
+            font-size: 28px;
+            font-weight: 700;
             color: #2c3e50;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         
-        .status {
+        .header-title p {
             color: #7f8c8d;
-            font-size: 18px;
+            font-size: 14px;
         }
         
-        .sensor-container {
+        .system-status {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .status-badge {
+            padding: 10px 20px;
+            border-radius: 50px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .status-badge i {
+            font-size: 16px;
+        }
+        
+        .status-online {
+            color: #27ae60;
+        }
+        
+        .status-offline {
+            color: #e74c3c;
+        }
+        
+        /* Cards Grid */
+        .cards-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
         }
         
-        .sensor-box {
+        .sensor-card {
             background: white;
+            border-radius: 20px;
             padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
         
-        .sensor-title {
-            font-size: 20px;
-            margin-bottom: 15px;
+        .sensor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .card-title i {
+            font-size: 28px;
+            padding: 12px;
+            border-radius: 15px;
+            background: #f0f3ff;
+            color: #4a6cf7;
+        }
+        
+        .card-title h3 {
+            font-size: 18px;
+            font-weight: 600;
             color: #2c3e50;
+        }
+        
+        .unit {
+            font-size: 14px;
+            color: #95a5a6;
+            font-weight: 400;
         }
         
         .sensor-value {
             font-size: 48px;
-            font-weight: bold;
-            margin: 20px 0;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            line-height: 1;
         }
         
-        .suhu { color: #e74c3c; }
-        .ph { color: #3498db; }
-        .do { color: #2ecc71; }
-        
-        .sensor-unit {
-            font-size: 20px;
+        .sensor-desc {
             color: #7f8c8d;
-        }
-        
-        .indikator {
-            padding: 8px 15px;
-            border-radius: 20px;
             font-size: 14px;
-            font-weight: bold;
-            display: inline-block;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
-        .normal { background: #d5f4e6; color: #27ae60; }
-        .warning { background: #fff3cd; color: #f39c12; }
-        .danger { background: #fdeaea; color: #e74c3c; }
+        .trend-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #ecf0f1;
+        }
         
-        .data-log {
+        /* Status Card */
+        .status-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .info-card {
             background: white;
-            padding: 25px;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        /* Charts */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .chart-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .chart-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .chart-time {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .time-btn {
+            padding: 5px 12px;
+            border-radius: 50px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .time-btn.active {
+            background: #4a6cf7;
+            color: white;
+            border-color: #4a6cf7;
+        }
+        
+        canvas {
+            width: 100% !important;
+            height: 300px !important;
+        }
+        
+        /* History Table */
+        .history-section {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            margin-bottom: 25px;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .section-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .refresh-btn {
+            padding: 10px 20px;
+            background: #4a6cf7;
+            color: white;
+            border: none;
             border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            background: #3451d6;
+        }
+        
+        .table-container {
+            overflow-x: auto;
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
-        }
-        
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
         }
         
         th {
+            text-align: left;
+            padding: 15px 10px;
             background: #f8f9fa;
             color: #2c3e50;
-        }
-        
-        .update-time {
-            text-align: right;
-            color: #7f8c8d;
+            font-weight: 600;
             font-size: 14px;
-            margin-top: 10px;
         }
         
-        @media (max-width: 600px) {
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 14px;
+        }
+        
+        .alert-normal {
+            color: #27ae60;
+            background: #e8f5e9;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 12px;
+            display: inline-block;
+        }
+        
+        .alert-warning {
+            color: #e67e22;
+            background: #fff3e0;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 12px;
+            display: inline-block;
+        }
+        
+        .alert-danger {
+            color: #e74c3c;
+            background: #fde9e9;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 12px;
+            display: inline-block;
+        }
+        
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #7f8c8d;
+        }
+        
+        .loading i {
+            font-size: 40px;
+            margin-bottom: 15px;
+            color: #4a6cf7;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
             .sensor-value {
                 font-size: 36px;
             }
             
-            .sensor-container {
+            .charts-container {
                 grid-template-columns: 1fr;
             }
+            
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Alert */
+        .alert-banner {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .alert-banner.show {
+            display: flex;
+        }
+        
+        .alert-banner i {
+            font-size: 24px;
+            color: #856404;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🌊 MONITORING KUALITAS AIR</h1>
-            <div class="status" id="status">Menghubungkan ke sensor...</div>
-        </header>
-        
-        <div class="sensor-container">
-            <!-- SUHU -->
-            <div class="sensor-box">
-                <div class="sensor-title">🌡️ SUHU AIR</div>
-                <div class="sensor-value suhu" id="suhuValue">--</div>
-                <div class="sensor-unit">°C</div>
-                <div class="indikator normal" id="suhuStatus">Normal</div>
-                <div style="margin-top: 10px; color: #7f8c8d;">
-                    Ideal: 22-30°C
-                </div>
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title">
+                <h1><i class="fas fa-water" style="color: #4a6cf7; margin-right: 10px;"></i>Monitoring Kualitas Air</h1>
+                <p>Dashboard real-time monitoring suhu, pH, dan TDS</p>
             </div>
-            
-            <!-- pH -->
-            <div class="sensor-box">
-                <div class="sensor-title">🧪 pH AIR</div>
-                <div class="sensor-value ph" id="phValue">--</div>
-                <div class="sensor-unit">pH</div>
-                <div class="indikator normal" id="phStatus">Normal</div>
-                <div style="margin-top: 10px; color: #7f8c8d;">
-                    Ideal: 6.5-8.5
+            <div class="system-status">
+                <div class="status-badge">
+                    <i class="fas fa-wifi" id="wifiIcon"></i>
+                    <span id="wifiStatus">Cek Koneksi...</span>
                 </div>
-            </div>
-            
-            <!-- DO -->
-            <div class="sensor-box">
-                <div class="sensor-title">💧 OKSIGEN TERLARUT</div>
-                <div class="sensor-value do" id="doValue">--</div>
-                <div class="sensor-unit">mg/L</div>
-                <div class="indikator normal" id="doStatus">Normal</div>
-                <div style="margin-top: 10px; color: #7f8c8d;">
-                    Minimal: 4 mg/L
+                <div class="status-badge">
+                    <i class="fas fa-database" id="firebaseIcon"></i>
+                    <span id="firebaseStatus">Cek Koneksi...</span>
+                </div>
+                <div class="status-badge">
+                    <i class="fas fa-clock"></i>
+                    <span id="lastUpdate">-</span>
                 </div>
             </div>
         </div>
         
-        <div class="data-log">
-            <h2>📊 DATA TERBARU</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Parameter</th>
-                        <th>Nilai</th>
-                        <th>Status</th>
-                        <th>Waktu</th>
-                    </tr>
-                </thead>
-                <tbody id="dataTable">
-                    <!-- Data akan diisi oleh JavaScript -->
-                </tbody>
-            </table>
-            <div class="update-time" id="updateTime">
-                Terakhir update: --
+        <!-- Alert Banner -->
+        <div class="alert-banner" id="alertBanner">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div>
+                <strong>Peringatan!</strong>
+                <span id="alertMessage">Parameter di luar batas normal</span>
+            </div>
+        </div>
+        
+        <!-- Sensor Cards -->
+        <div class="cards-grid">
+            <!-- Suhu Card -->
+            <div class="sensor-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-thermometer-half"></i>
+                        <h3>Suhu <span class="unit">°C</span></h3>
+                    </div>
+                    <span class="status-badge" id="suhuStatus">Normal</span>
+                </div>
+                <div class="sensor-value" id="suhuValue">--.-</div>
+                <div class="sensor-desc">
+                    <i class="fas fa-chart-line"></i>
+                    Rentang normal: 20 - 35 °C
+                </div>
+                <div class="trend-indicator">
+                    <i class="fas fa-arrow-up" id="suhuTrend" style="color: #27ae60;"></i>
+                    <span id="suhuTime">-</span>
+                </div>
+            </div>
+            
+            <!-- pH Card -->
+            <div class="sensor-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-flask"></i>
+                        <h3>pH <span class="unit">-</span></h3>
+                    </div>
+                    <span class="status-badge" id="phStatus">Normal</span>
+                </div>
+                <div class="sensor-value" id="phValue">--.--</div>
+                <div class="sensor-desc">
+                    <i class="fas fa-chart-line"></i>
+                    Rentang normal: 6.5 - 8.5
+                </div>
+                <div class="trend-indicator">
+                    <i class="fas fa-arrow-up" id="pHTrend" style="color: #27ae60;"></i>
+                    <span id="pHTIme">-</span>
+                </div>
+            </div>
+            
+            <!-- TDS Card (GANTI DO) -->
+            <div class="sensor-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-tint"></i>  <!-- Icon tetesan air untuk TDS -->
+                        <h3>TDS <span class="unit">ppm</span></h3>
+                    </div>
+                    <span class="status-badge" id="tdsStatus">Normal</span>
+                </div>
+                <div class="sensor-value" id="tdsValue">---</div>
+                <div class="sensor-desc">
+                    <i class="fas fa-chart-line"></i>
+                    Rentang normal: 100 - 500 ppm
+                </div>
+                <div class="trend-indicator">
+                    <i class="fas fa-arrow-up" id="tdsTrend" style="color: #27ae60;"></i>
+                    <span id="tdsTime">-</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Status -->
+        <div class="status-container">
+            <div class="info-card">
+                <h3 style="margin-bottom: 15px; font-size: 16px;">
+                    <i class="fas fa-microchip" style="margin-right: 10px; color: #4a6cf7;"></i>
+                    Sistem Info
+                </h3>
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-wifi"></i> WiFi SSID</span>
+                    <span class="info-value" id="wifiSSID">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-network-wired"></i> IP Address</span>
+                    <span class="info-value" id="ipAddress">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-signal"></i> RSSI</span>
+                    <span class="info-value" id="wifiRSSI">- dBm</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-clock"></i> Uptime</span>
+                    <span class="info-value" id="uptime">-</span>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <h3 style="margin-bottom: 15px; font-size: 16px;">
+                    <i class="fas fa-chart-bar" style="margin-right: 10px; color: #4a6cf7;"></i>
+                    Statistik
+                </h3>
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-thermometer-half"></i> Rata-rata Suhu</span>
+                    <span class="info-value" id="avgSuhu">- °C</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-flask"></i> Rata-rata pH</span>
+                    <span class="info-value" id="avgPh">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-tint"></i> Rata-rata TDS</span>  <!-- Ganti icon -->
+                    <span class="info-value" id="avgTds">- ppm</span>  <!-- Ganti id -->
+                </div>
+                <div class="info-item">
+                    <span class="info-label"><i class="fas fa-database"></i> Update Interval</span>
+                    <span class="info-value" id="updateInterval">30 detik</span>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <h3 style="margin-bottom: 15px; font-size: 16px;">
+                    <i class="fas fa-sliders-h" style="margin-right: 10px; color: #4a6cf7;"></i>
+                    Kontrol
+                </h3>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button onclick="refreshData()" class="time-btn" style="flex: 1; padding: 12px;">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                    <button onclick="exportData()" class="time-btn" style="flex: 1; padding: 12px; background: #27ae60; color: white; border-color: #27ae60;">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+                <p style="color: #7f8c8d; font-size: 12px; margin-top: 15px;">
+                    <i class="fas fa-info-circle"></i> Data diperbarui setiap 30 detik dari Firebase
+                </p>
+            </div>
+        </div>
+        
+        <!-- Charts -->
+        <div class="charts-container">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-thermometer-half" style="color: #e74c3c; margin-right: 8px;"></i> Grafik Suhu</h3>
+                    <div class="chart-time">
+                        <button class="time-btn active" onclick="setTimeRange('suhu', 10)">10</button>
+                        <button class="time-btn" onclick="setTimeRange('suhu', 30)">30</button>
+                        <button class="time-btn" onclick="setTimeRange('suhu', 60)">60</button>
+                    </div>
+                </div>
+                <canvas id="suhuChart"></canvas>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-flask" style="color: #3498db; margin-right: 8px;"></i> Grafik pH</h3>
+                    <div class="chart-time">
+                        <button class="time-btn active" onclick="setTimeRange('ph', 10)">10</button>
+                        <button class="time-btn" onclick="setTimeRange('ph', 30)">30</button>
+                        <button class="time-btn" onclick="setTimeRange('ph', 60)">60</button>
+                    </div>
+                </div>
+                <canvas id="phChart"></canvas>
+            </div>
+            
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-tint" style="color: #00BCD4; margin-right: 8px;"></i> Grafik TDS</h3>  <!-- Ganti judul -->
+                    <div class="chart-time">
+                        <button class="time-btn active" onclick="setTimeRange('tds', 10)">10</button>
+                        <button class="time-btn" onclick="setTimeRange('tds', 30)">30</button>
+                        <button class="time-btn" onclick="setTimeRange('tds', 60)">60</button>
+                    </div>
+                </div>
+                <canvas id="tdsChart"></canvas>  <!-- Ganti id -->
+            </div>
+        </div>
+        
+        <!-- History Table -->
+        <div class="history-section">
+            <div class="section-header">
+                <h3><i class="fas fa-history" style="margin-right: 10px; color: #4a6cf7;"></i> Riwayat Data Terakhir</h3>
+                <button onclick="loadHistory()" class="refresh-btn">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="table-container">
+                <table id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>Waktu</th>
+                            <th>Suhu (°C)</th>
+                            <th>pH</th>
+                            <th>TDS (ppm)</th>  <!-- Ganti header -->
+                            <th>Status</th>
+                            <th>WiFi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr>
+                            <td colspan="6" class="loading">
+                                <i class="fas fa-spinner fa-spin"></i><br>
+                                Memuat data...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-
+    
     <script>
-        // =============================================
-        // KONFIGURASI FIREBASE
-        // =============================================
-        // Ganti dengan data Firebase Anda
+        // Konfigurasi Firebase
         const firebaseConfig = {
-            apiKey: "AIzaSyDYm1I4yovQULnh1epYle8m32mRc6C11SM",
-            authDomain: "water-monitoring-db328.firebaseapp.com",
-            databaseURL: "https://water-monitoring-db328-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "water-monitoring-db328",
-            storageBucket: "water-monitoring-db328.firebasestorage.app",
-            messagingSenderId: "556036235945",
-            appId: "1:556036235945:web:b496d64cab402ad5b9bfb8"
+            apiKey: "AIzaSyCNbR-dUoCaMu4oAGD8XQ7NnkwmTh0-zmo",
+            authDomain: "monitor-kualitas-air-ikan-web.firebaseapp.com",
+            databaseURL: "https://monitor-kualitas-air-ikan-web-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "monitor-kualitas-air-ikan-web",
+            storageBucket: "monitor-kualitas-air-ikan-web.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:abc123def456"
         };
-        
-        // =============================================
-        // VARIABEL GLOBAL
-        // =============================================
-        let dataTerbaru = {
-            suhu: 0,
-            ph: 0,
-            do: 0,
-            waktu: 0
-        };
-        
-        // =============================================
-        // FUNGSI INISIALISASI
-        // =============================================
-        function inisialisasi() {
-            document.getElementById('status').textContent = "Sistem siap";
-            
-            // Untuk demo (jika belum punya Firebase)
-            // Hapus baris ini jika sudah pakai Firebase asli
-            demoMode();
+
+        // Inisialisasi Firebase
+        let database;
+        try {
+            firebase.initializeApp(firebaseConfig);
+            database = firebase.database();
+            console.log("Firebase initialized successfully");
+        } catch (error) {
+            console.error("Firebase initialization error:", error);
         }
+
+        // Chart instances
+        let suhuChart, phChart, tdsChart;  // Ganti doChart menjadi tdsChart
         
-        // =============================================
-        // FUNGSI UPDATE TAMPILAN
-        // =============================================
-        function updateTampilan(data) {
-            // Format angka
-            const suhuFormatted = data.suhu.toFixed(1);
-            const phFormatted = data.ph.toFixed(2);
-            const doFormatted = data.do.toFixed(2);
+        // Data history
+        let historyData = [];
+        
+        // Batas parameter - TDS MENGGANTIKAN DO
+        const BATAS = {
+            suhu: { min: 20, max: 35 },
+            ph: { min: 6.5, max: 8.5 },
+            tds: { min: 100, max: 500 }  // Ganti do menjadi tds
+        };
+
+        // Inisialisasi
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            setupFirebaseListeners();
+            loadHistory();
             
-            // Update nilai
-            document.getElementById('suhuValue').textContent = suhuFormatted;
-            document.getElementById('phValue').textContent = phFormatted;
-            document.getElementById('doValue').textContent = doFormatted;
-            
-            // Update status
-            updateStatus('suhu', data.suhu);
-            updateStatus('ph', data.ph);
-            updateStatus('do', data.do);
-            
-            // Update tabel
-            updateTabel(data);
+            // Update waktu setiap detik
+            setInterval(updateTimestamps, 1000);
+        });
+
+        // Setup Firebase listeners
+        function setupFirebaseListeners() {
+            // Listen untuk realtime data
+            const latestRef = database.ref('/data_realtime/latest');
+            latestRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    updateDashboard(data);
+                    updateFirebaseStatus(true);
+                }
+            }, (error) => {
+                console.error("Firebase error:", error);
+                updateFirebaseStatus(false);
+            });
+
+            // Listen untuk system status
+            const systemRef = database.ref('/system');
+            systemRef.on('value', (snapshot) => {
+                const system = snapshot.val();
+                if (system) {
+                    updateSystemInfo(system);
+                }
+            });
+
+            // Listen untuk stats
+            const statsRef = database.ref('/stats');
+            statsRef.on('value', (snapshot) => {
+                const stats = snapshot.val();
+                if (stats) {
+                    updateStats(stats);
+                }
+            });
+        }
+
+        // Update dashboard dengan data terbaru
+        function updateDashboard(data) {
+            // Update nilai sensor
+            document.getElementById('suhuValue').textContent = data.suhu ? data.suhu.toFixed(1) : '--.-';
+            document.getElementById('phValue').textContent = data.ph ? data.ph.toFixed(2) : '--.--';
+            document.getElementById('tdsValue').textContent = data.tds ? Math.round(data.tds) : '---';  // Ganti do jadi tds
             
             // Update waktu
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('id-ID');
-            document.getElementById('updateTime').textContent = 
-                `Terakhir update: ${timeString}`;
-        }
-        
-        // =============================================
-        // FUNGSI UPDATE STATUS
-        // =============================================
-        function updateStatus(jenis, nilai) {
-            let status = "normal";
-            let teks = "Normal";
+            const waktu = data.waktu || getTimeString();
+            document.getElementById('lastUpdate').textContent = waktu;
             
-            if (jenis === 'suhu') {
-                if (nilai < 22 || nilai > 30) {
-                    status = nilai > 30 ? "danger" : "warning";
-                    teks = nilai > 30 ? "Terlalu Panas" : "Terlalu Dingin";
-                }
-            } else if (jenis === 'ph') {
-                if (nilai < 6.5 || nilai > 8.5) {
-                    status = "danger";
-                    teks = nilai > 8.5 ? "Terlalu Basa" : "Terlalu Asam";
-                }
-            } else if (jenis === 'do') {
-                if (nilai < 4) {
-                    status = "danger";
-                    teks = "Oksigen Rendah";
+            // Update status parameter
+            updateParameterStatus(data);
+            
+            // Update grafik
+            updateCharts(data);
+            
+            // Update alert
+            checkAlerts(data);
+        }
+
+        // Update status parameter - MODIFIED: TDS
+        function updateParameterStatus(data) {
+            // Suhu status
+            const suhuStatus = document.getElementById('suhuStatus');
+            if (data.suhu) {
+                if (data.suhu > BATAS.suhu.max) {
+                    suhuStatus.textContent = 'Tinggi';
+                    suhuStatus.style.background = '#fde9e9';
+                    suhuStatus.style.color = '#e74c3c';
+                } else if (data.suhu < BATAS.suhu.min) {
+                    suhuStatus.textContent = 'Rendah';
+                    suhuStatus.style.background = '#fff3e0';
+                    suhuStatus.style.color = '#e67e22';
+                } else {
+                    suhuStatus.textContent = 'Normal';
+                    suhuStatus.style.background = '#e8f5e9';
+                    suhuStatus.style.color = '#27ae60';
                 }
             }
-            
-            // Update tampilan
-            const element = document.getElementById(jenis + 'Status');
-            element.textContent = teks;
-            element.className = `indikator ${status}`;
-        }
-        
-        // =============================================
-        // FUNGSI UPDATE TABEL
-        // =============================================
-        function updateTabel(data) {
-            const now = new Date();
-            const waktu = now.toLocaleTimeString('id-ID');
-            
-            const html = `
-                <tr>
-                    <td>🌡️ Suhu Air</td>
-                    <td>${data.suhu.toFixed(1)} °C</td>
-                    <td><span class="indikator ${getStatusClass('suhu', data.suhu)}">${getStatusText('suhu', data.suhu)}</span></td>
-                    <td>${waktu}</td>
-                </tr>
-                <tr>
-                    <td>🧪 pH Air</td>
-                    <td>${data.ph.toFixed(2)}</td>
-                    <td><span class="indikator ${getStatusClass('ph', data.ph)}">${getStatusText('ph', data.ph)}</span></td>
-                    <td>${waktu}</td>
-                </tr>
-                <tr>
-                    <td>💧 Oksigen Terlarut</td>
-                    <td>${data.do.toFixed(2)} mg/L</td>
-                    <td><span class="indikator ${getStatusClass('do', data.do)}">${getStatusText('do', data.do)}</span></td>
-                    <td>${waktu}</td>
-                </tr>
-            `;
-            
-            document.getElementById('dataTable').innerHTML = html;
-        }
-        
-        function getStatusClass(jenis, nilai) {
-            if (jenis === 'suhu') {
-                return (nilai < 22 || nilai > 30) ? (nilai > 30 ? "danger" : "warning") : "normal";
-            } else if (jenis === 'ph') {
-                return (nilai < 6.5 || nilai > 8.5) ? "danger" : "normal";
-            } else if (jenis === 'do') {
-                return nilai < 4 ? "danger" : "normal";
+
+            // pH status
+            const phStatus = document.getElementById('phStatus');
+            if (data.ph) {
+                if (data.ph > BATAS.ph.max) {
+                    phStatus.textContent = 'Tinggi';
+                    phStatus.style.background = '#fde9e9';
+                    phStatus.style.color = '#e74c3c';
+                } else if (data.ph < BATAS.ph.min) {
+                    phStatus.textContent = 'Rendah';
+                    phStatus.style.background = '#fff3e0';
+                    phStatus.style.color = '#e67e22';
+                } else {
+                    phStatus.textContent = 'Normal';
+                    phStatus.style.background = '#e8f5e9';
+                    phStatus.style.color = '#27ae60';
+                }
             }
-            return "normal";
-        }
-        
-        function getStatusText(jenis, nilai) {
-            if (jenis === 'suhu') {
-                if (nilai < 22) return "Terlalu Dingin";
-                if (nilai > 30) return "Terlalu Panas";
-                return "Normal";
-            } else if (jenis === 'ph') {
-                if (nilai < 6.5) return "Terlalu Asam";
-                if (nilai > 8.5) return "Terlalu Basa";
-                return "Normal";
-            } else if (jenis === 'do') {
-                return nilai < 4 ? "Oksigen Rendah" : "Normal";
+
+            // TDS status (GANTI DO)
+            const tdsStatus = document.getElementById('tdsStatus');
+            if (data.tds) {
+                if (data.tds > BATAS.tds.max) {
+                    tdsStatus.textContent = 'Tinggi';
+                    tdsStatus.style.background = '#fde9e9';
+                    tdsStatus.style.color = '#e74c3c';
+                } else if (data.tds < BATAS.tds.min) {
+                    tdsStatus.textContent = 'Rendah';
+                    tdsStatus.style.background = '#fff3e0';
+                    tdsStatus.style.color = '#e67e22';
+                } else {
+                    tdsStatus.textContent = 'Normal';
+                    tdsStatus.style.background = '#e8f5e9';
+                    tdsStatus.style.color = '#27ae60';
+                }
             }
-            return "Normal";
         }
-        
-        // =============================================
-        // MODE DEMO (UNTUK TESTING)
-        // =============================================
-        function demoMode() {
-            document.getElementById('status').textContent = "Mode Demo Aktif";
+
+        // Update system info
+        function updateSystemInfo(system) {
+            document.getElementById('wifiSSID').textContent = system.wifi_ssid || '-';
+            document.getElementById('ipAddress').textContent = system.ip_address || '-';
+            document.getElementById('wifiRSSI').textContent = (system.wifi_rssi || '0') + ' dBm';
             
-            // Buat data acak untuk demo
-            setInterval(() => {
-                dataTerbaru = {
-                    suhu: 25 + Math.random() * 5,  // 25-30°C
-                    ph: 7.0 + (Math.random() - 0.5) * 2,  // 6-8 pH
-                    do: 5 + Math.random() * 3,  // 5-8 mg/L
-                    waktu: Date.now()
-                };
+            // Update WiFi status
+            const wifiIcon = document.getElementById('wifiIcon');
+            const wifiStatus = document.getElementById('wifiStatus');
+            
+            if (system.connected) {
+                wifiIcon.className = 'fas fa-wifi status-online';
+                wifiStatus.textContent = 'WiFi Online';
+                wifiStatus.style.color = '#27ae60';
+            } else {
+                wifiIcon.className = 'fas fa-wifi status-offline';
+                wifiStatus.textContent = 'WiFi Offline';
+                wifiStatus.style.color = '#e74c3c';
+            }
+            
+            // Uptime
+            if (system.last_connection) {
+                document.getElementById('uptime').textContent = system.last_connection;
+            }
+        }
+
+        // Update stats - MODIFIED: TDS
+        function updateStats(stats) {
+            if (stats.last_suhu) {
+                document.getElementById('avgSuhu').textContent = stats.last_suhu.toFixed(1) + ' °C';
+            }
+            if (stats.last_ph) {
+                document.getElementById('avgPh').textContent = stats.last_ph.toFixed(2);
+            }
+            if (stats.last_tds) {  // Ganti last_do jadi last_tds
+                document.getElementById('avgTds').textContent = Math.round(stats.last_tds) + ' ppm';  // Ganti id
+            }
+        }
+
+        // Update Firebase status
+        function updateFirebaseStatus(isConnected) {
+            const firebaseIcon = document.getElementById('firebaseIcon');
+            const firebaseStatus = document.getElementById('firebaseStatus');
+            
+            if (isConnected) {
+                firebaseIcon.className = 'fas fa-database status-online';
+                firebaseStatus.textContent = 'Firebase Online';
+                firebaseStatus.style.color = '#27ae60';
+            } else {
+                firebaseIcon.className = 'fas fa-database status-offline';
+                firebaseStatus.textContent = 'Firebase Offline';
+                firebaseStatus.style.color = '#e74c3c';
+            }
+        }
+
+        // Inisialisasi charts - MODIFIED: TDS
+        function initCharts() {
+            // Suhu Chart
+            const suhuCtx = document.getElementById('suhuChart').getContext('2d');
+            suhuChart = new Chart(suhuCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Suhu (°C)',
+                        data: [],
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 15,
+                            max: 40,
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // pH Chart
+            const phCtx = document.getElementById('phChart').getContext('2d');
+            phChart = new Chart(phCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'pH',
+                        data: [],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 4,
+                            max: 10,
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // TDS Chart (GANTI DO Chart)
+            const tdsCtx = document.getElementById('tdsChart').getContext('2d');
+            tdsChart = new Chart(tdsCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'TDS (ppm)',
+                        data: [],
+                        borderColor: '#00BCD4',  // Warna cyan untuk TDS
+                        backgroundColor: 'rgba(0, 188, 212, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 6,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            min: 0,
+                            max: 1000,  // Skala TDS 0-1000 ppm
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update charts dengan data baru - MODIFIED: TDS
+        function updateCharts(data) {
+            const waktu = new Date().toLocaleTimeString('id-ID', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit' 
+            });
+
+            // Update suhu chart
+            if (suhuChart.data.labels.length > 20) {
+                suhuChart.data.labels.shift();
+                suhuChart.data.datasets[0].data.shift();
+            }
+            suhuChart.data.labels.push(waktu);
+            suhuChart.data.datasets[0].data.push(data.suhu || 0);
+            suhuChart.update();
+
+            // Update pH chart
+            if (phChart.data.labels.length > 20) {
+                phChart.data.labels.shift();
+                phChart.data.datasets[0].data.shift();
+            }
+            phChart.data.labels.push(waktu);
+            phChart.data.datasets[0].data.push(data.ph || 0);
+            phChart.update();
+
+            // Update TDS chart (GANTI DO)
+            if (tdsChart.data.labels.length > 20) {
+                tdsChart.data.labels.shift();
+                tdsChart.data.datasets[0].data.shift();
+            }
+            tdsChart.data.labels.push(waktu);
+            tdsChart.data.datasets[0].data.push(data.tds || 0);
+            tdsChart.update();
+        }
+
+        // Load history data - MODIFIED: TDS
+        function loadHistory() {
+            const historyRef = database.ref('/data_history');
+            historyRef.orderByKey().limitToLast(10).once('value', (snapshot) => {
+                const data = snapshot.val();
+                const tbody = document.getElementById('historyBody');
                 
-                updateTampilan(dataTerbaru);
-            }, 3000);
+                if (data) {
+                    let html = '';
+                    const entries = Object.entries(data).reverse();
+                    
+                    entries.forEach(([key, value]) => {
+                        const status = getStatusText(value);
+                        const statusClass = getStatusClass(value);
+                        
+                        html += `<tr>
+                            <td>${value.waktu || formatTimestamp(key)}</td>
+                            <td>${value.suhu ? value.suhu.toFixed(1) : '0.0'}</td>
+                            <td>${value.ph ? value.ph.toFixed(2) : '0.00'}</td>
+                            <td>${value.tds ? Math.round(value.tds) : '0'}</td>  <!-- Ganti do jadi tds -->
+                            <td><span class="${statusClass}">${status}</span></td>
+                            <td>${value.wifi_rssi || '-'} dBm</td>
+                        </tr>`;
+                    });
+                    
+                    tbody.innerHTML = html;
+                } else {
+                    tbody.innerHTML = `<tr>
+                        <td colspan="6" style="text-align: center; padding: 30px;">
+                            <i class="fas fa-database" style="font-size: 40px; color: #bdc3c7; margin-bottom: 10px;"></i><br>
+                            Belum ada data
+                        </td>
+                    </tr>`;
+                }
+            });
         }
-        
-        // =============================================
-        // JALANKAN SAAT HALAMAN DIMUAT
-        // =============================================
-        window.onload = inisialisasi;
+
+        // Get status text - MODIFIED: TDS
+        function getStatusText(data) {
+            let status = [];
+            if (data.suhu > BATAS.suhu.max) status.push('Suhu Tinggi');
+            else if (data.suhu < BATAS.suhu.min) status.push('Suhu Rendah');
+            
+            if (data.ph > BATAS.ph.max) status.push('pH Tinggi');
+            else if (data.ph < BATAS.ph.min) status.push('pH Rendah');
+            
+            if (data.tds > BATAS.tds.max) status.push('TDS Tinggi');  // Ganti do jadi tds
+            else if (data.tds < BATAS.tds.min) status.push('TDS Rendah');
+            
+            return status.length > 0 ? status.join(', ') : 'Normal';
+        }
+
+        // Get status class - MODIFIED: TDS
+        function getStatusClass(data) {
+            let isWarning = false;
+            let isDanger = false;
+            
+            if (data.suhu > BATAS.suhu.max || data.suhu < BATAS.suhu.min) isDanger = true;
+            if (data.ph > BATAS.ph.max || data.ph < BATAS.ph.min) isDanger = true;
+            if (data.tds > BATAS.tds.max || data.tds < BATAS.tds.min) isDanger = true;  // Ganti do jadi tds
+            
+            if (isDanger) return 'alert-danger';
+            if (isWarning) return 'alert-warning';
+            return 'alert-normal';
+        }
+
+        // Check alerts - MODIFIED: TDS
+        function checkAlerts(data) {
+            const alertBanner = document.getElementById('alertBanner');
+            const alertMessage = document.getElementById('alertMessage');
+            
+            let alerts = [];
+            
+            if (data.suhu > BATAS.suhu.max) {
+                alerts.push(`Suhu tinggi (${data.suhu.toFixed(1)}°C)`);
+            } else if (data.suhu < BATAS.suhu.min && data.suhu > 0) {
+                alerts.push(`Suhu rendah (${data.suhu.toFixed(1)}°C)`);
+            }
+            
+            if (data.ph > BATAS.ph.max) {
+                alerts.push(`pH tinggi (${data.ph.toFixed(2)})`);
+            } else if (data.ph < BATAS.ph.min && data.ph > 0) {
+                alerts.push(`pH rendah (${data.ph.toFixed(2)})`);
+            }
+            
+            if (data.tds > BATAS.tds.max && data.tds > 0) {  // Ganti do jadi tds
+                alerts.push(`TDS tinggi (${Math.round(data.tds)} ppm)`);
+            } else if (data.tds < BATAS.tds.min && data.tds > 0) {
+                alerts.push(`TDS rendah (${Math.round(data.tds)} ppm)`);
+            }
+            
+            if (alerts.length > 0) {
+                alertMessage.textContent = alerts.join(' • ');
+                alertBanner.classList.add('show');
+            } else {
+                alertBanner.classList.remove('show');
+            }
+        }
+
+        // Set time range for charts - MODIFIED: TDS
+        function setTimeRange(chartType, minutes) {
+            // Update active button
+            let chartIndex = 1;
+            if (chartType === 'suhu') chartIndex = 1;
+            else if (chartType === 'ph') chartIndex = 2;
+            else if (chartType === 'tds') chartIndex = 3;  // Ganti 'do' jadi 'tds'
+            
+            const buttons = document.querySelectorAll(`.chart-card:nth-child(${chartIndex}) .time-btn`);
+            
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // TODO: Implement time range filtering
+            console.log(`Set ${chartType} chart to show last ${minutes} minutes`);
+        }
+
+        // Refresh data
+        function refreshData() {
+            const latestRef = database.ref('/data_realtime/latest');
+            latestRef.once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    updateDashboard(data);
+                }
+            });
+            
+            loadHistory();
+            
+            // Animasi button
+            const btn = event.target.closest('button');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+            }, 1000);
+        }
+
+        // Export data to CSV - MODIFIED: TDS
+        function exportData() {
+            const historyRef = database.ref('/data_history');
+            historyRef.orderByKey().limitToLast(50).once('value', (snapshot) => {
+                const data = snapshot.val();
+                
+                if (data) {
+                    let csv = 'Waktu,Suhu (°C),pH,TDS (ppm),Status,WiFi RSSI\n';  // Ganti header
+                    
+                    Object.entries(data).forEach(([key, value]) => {
+                        const waktu = value.waktu || formatTimestamp(key);
+                        const status = getStatusText(value);
+                        csv += `${waktu},${value.suhu || 0},${value.ph || 0},${value.tds || 0},${status},${value.wifi_rssi || 0}\n`;  // Ganti value.do
+                    });
+                    
+                    // Download CSV
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `monitoring-air-tds-${new Date().toISOString().slice(0,10)}.csv`;
+                    a.click();
+                }
+            });
+        }
+
+        // Update timestamps
+        function updateTimestamps() {
+            // Update relative timestamps if needed
+        }
+
+        // Format timestamp
+        function formatTimestamp(timestamp) {
+            if (!isNaN(timestamp) && timestamp.length > 10) {
+                const date = new Date(parseInt(timestamp));
+                return date.toLocaleString('id-ID');
+            }
+            return timestamp;
+        }
+
+        // Get time string
+        function getTimeString() {
+            const now = new Date();
+            return now.toLocaleTimeString('id-ID', { 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit' 
+            });
+        }
+
+        // Error handling
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error('Error: ' + msg + '\nURL: ' + url + '\nLine: ' + lineNo);
+            return false;
+        };
     </script>
 </body>
 </html>
